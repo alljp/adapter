@@ -16,6 +16,8 @@ if (process.env.BROWSER) {
     browsers = ['Edge'];
   } else if (process.env.BROWSER === 'safari') {
     browsers = ['Safari'];
+  } else if (process.env.BROWSER === 'Electron') {
+    browsers = ['electron'];
   } else {
     browsers = [process.env.BROWSER];
   }
@@ -53,10 +55,14 @@ if (!process.env.CHROME_BIN) {
 let chromeFlags = [
   '--use-fake-device-for-media-stream',
   '--use-fake-ui-for-media-stream',
+  '--no-sandbox',
   '--headless', '--disable-gpu', '--remote-debugging-port=9222'
 ];
 if (process.env.CHROMEEXPERIMENT !== 'false') {
   chromeFlags.push('--enable-experimental-web-platform-features');
+}
+if (process.env.PLANB) {
+  chromeFlags.push('--disable-features=RTCUnifiedPlanByDefault');
 }
 
 module.exports = function(config) {
@@ -64,13 +70,13 @@ module.exports = function(config) {
     basePath: '..',
     frameworks: ['browserify', 'mocha', 'chai'],
     files: [
-      'src/js/adapter_core.js',
+      'dist/adapter_core5.js',
       'test/getusermedia-mocha.js',
       'test/e2e/*.js',
     ],
     exclude: [],
     preprocessors: {
-      'src/js/adapter_core.js': ['browserify']
+      'dist/adapter_core5.js': ['browserify']
     },
     reporters,
     port: 9876,
@@ -81,6 +87,10 @@ module.exports = function(config) {
       chrome: {
         base: 'Chrome',
         flags: chromeFlags
+      },
+      electron: {
+        base: 'Electron',
+        flags: ['--use-fake-device-for-media-stream']
       },
       firefox: {
         base: 'Firefox',
@@ -103,7 +113,8 @@ module.exports = function(config) {
       path: 'test/e2e/expectations/' +
           process.env.BROWSER +
           (process.env.BVER ? '-' + process.env.BVER : '') +
-          (process.env.CHROMEEXPERIMENT === 'false' ? '-no-experimental' : ''),
+          (process.env.CHROMEEXPERIMENT === 'false' ? '-no-experimental' : '') +
+          (process.env.PLANB ? '-planb' : ''),
       update: process.env.UPDATE_STABILITYREPORTER || false,
     }
   });

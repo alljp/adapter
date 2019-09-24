@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2017 The WebRTC project authors. All Rights Reserved.
+ *  Copyright (c) 2018 The WebRTC project authors. All Rights Reserved.
  *
  *  Use of this source code is governed by a BSD-style license
  *  that can be found in the LICENSE file in the root of the source
@@ -8,10 +8,17 @@
  /* eslint-env node */
 'use strict';
 
-describe('addIceCandidate', () => {
+describe('negotiationneeded event', () => {
   let pc;
-
   beforeEach(() => {
+    pc = new RTCPeerConnection();
+  });
+  afterEach(() => {
+    pc.close();
+  });
+
+  it('does not fire when adding a track after ' +
+     'setRemoteDescription', (done) => {
     const sdp = 'v=0\r\n' +
         'o=- 166855176514521964 2 IN IP4 127.0.0.1\r\n' +
         's=-\r\n' +
@@ -31,28 +38,18 @@ describe('addIceCandidate', () => {
         'a=rtpmap:111 opus/48000/2\r\n' +
         'a=msid:stream1 track1\r\n' +
         'a=ssrc:1001 cname:some\r\n';
-    pc = new RTCPeerConnection();
-    return pc.setRemoteDescription({type: 'offer', sdp})
+    var onnfired = false;
+    pc.onnegotiationneeded = () => {
+      onnfired = true;
+    };
+    pc.setRemoteDescription({type: 'offer', sdp})
+    .then(() => navigator.mediaDevices.getUserMedia({audio: true}))
+    .then((stream) => pc.addTrack(stream.getTracks()[0], stream))
     .then(() => {
-      return pc.addIceCandidate({sdpMid: 'mid1', candidate:
-          'candidate:702786350 1 udp 41819902 8.8.8.8 60769 typ host'});
+      setTimeout(() => {
+        expect(onnfired).to.equal(false);
+        done();
+      }, 0);
     });
-  });
-  afterEach(() => {
-    pc.close();
-  });
-
-  describe('after setRemoteDescription', () => {
-    it('resolves when called with null', () =>
-      pc.addIceCandidate(null)
-    );
-
-    it('resolves when called with undefined', () =>
-      pc.addIceCandidate(undefined)
-    );
-
-    it('resolves when called with {candidate: \'\'}', () =>
-      pc.addIceCandidate({candidate: '', sdpMid: 'mid1'})
-    );
   });
 });
